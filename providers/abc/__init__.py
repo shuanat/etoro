@@ -4,7 +4,7 @@ import asyncio
 import aiohttp
 
 from logger import logger
-from providers.etoro import helpers
+from providers import helpers
 
 
 class BaseProvider(ABC):
@@ -13,9 +13,7 @@ class BaseProvider(ABC):
         self.session = aiohttp.ClientSession(loop=loop)
         self.timeout = 10
         self.loop = loop
-        self.cookies = {
-            "TMIS1": "9a74f2a102375b68ad54cc9c5bdfcf530324a4fb2fe9a337d0b22132582947cf6e439acff3154971baf83c9b2be3f5ce89c06f2ea719ae74473d6c3fb5a78894b9fc1cb01cabc90bd63e21d945dadebb0c8b372984534a6473c66cf77c3269755f6dadd2a270d38c2443c31975"
-        }
+        self.cookies = {}
 
     async def login(self):
         """Вход в систему"""
@@ -44,7 +42,7 @@ class BaseProvider(ABC):
             return answer
         except Exception as e:
             logger.error(e)
-            return {}
+            return "{}"
 
     async def execute(self):
         raise NotImplemented

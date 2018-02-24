@@ -3,4 +3,4 @@ import logging
 FORMAT = '%(asctime)-15s  %(message)s'
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger("main")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
