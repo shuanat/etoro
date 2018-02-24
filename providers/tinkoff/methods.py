@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Tuple, List, Dict
+from typing import List, Dict
 
 from providers.abc import BaseProvider
 from providers.data_classess import Tick
@@ -35,6 +35,7 @@ class TinkofProvider(BaseProvider):
                 try:
                     self.strategy.tick(Tick(time=datetime.fromtimestamp(tick[0]), price=tick[1],
                                        instrument_name=display_name,
+                                       lot_size=instruments_story[display_name].lot_size,
                                        instrument_id=instruments_story[display_name].instrument_id)
                                        )
                 except TypeError as e:
@@ -43,7 +44,7 @@ class TinkofProvider(BaseProvider):
 
     async def get_instruments(self) -> List[InstrumentList]:
         return_data = []  # type: List[InstrumentList]
-        url = 'https://api.tinkoff.ru/trading/stocks/list?pageSize=12&currentPage=0&start=0&end=12&sortType=ByEarnings&orderType=Desc&country=All'
+        url = 'https://api.tinkoff.ru/trading/stocks/list?pageSize=12&currentPage=0&start=0&end=12&sortType=ByEarnings&orderType=Desc&country=Russian'
         instruments = await self.get(url, self.default_header)
         for d in json.loads(instruments)["payload"]["values"]:
             if d["symbol"]["symbolType"] != "Stock":
@@ -52,12 +53,16 @@ class TinkofProvider(BaseProvider):
                                         instrument_display_name=d["symbol"]["showName"],
                                         stock_industry_id=0,
                                         symbol_full=d["symbol"]["showName"],
+                                        lot_size=d["symbol"]["lotSize"]
                                         )
             return_data.append(instrument)
         return return_data
 
     async def get_history(self, instrument_id: str=None) -> list:
-        url = 'https://api.tinkoff.ru/trading/symbols/historical_data?ticker={}&from=2018-01-23T21%3A00%3A00.000Z&to=2018-02-24T06%3A02%3A51.779Z&resolution=D'.format(
-                                                                                      instrument_id)
+        day_start = '2018-01-24'
+        day_end = datetime.now().strftime("%Y-%m-%d")
+        resolution = "D"
+        url = 'https://api.tinkoff.ru/trading/symbols/historical_data?ticker={}&from={}T21%3A00%3A00.000Z&to={}T06%3A02%3A51.779Z&resolution={}'.format(
+                                                                                      instrument_id, day_start, day_end, resolution)
         data = await self.get(url, self.default_header)
         return json.loads(data)["payload"]["data"]

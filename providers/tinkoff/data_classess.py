@@ -7,3 +7,4 @@ class InstrumentList:
     instrument_display_name: str
     stock_industry_id: int
     symbol_full: str
+    lot_size: int

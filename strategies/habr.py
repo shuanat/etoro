@@ -1,4 +1,4 @@
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 import pandas as pd
 from statsmodels.tsa.stattools import adfuller, coint
@@ -14,14 +14,16 @@ from providers.data_classess import (Instrument, InstrumentHistory,
 
 class HabrStrategy(BaseStrategy):
     COUNT_CHECK_ADFULLER = 20
-    MAX_ORDERS = 10
+    MAX_ORDERS = 2
+    BALANCE = 5000
 
     def __init__(self, loop):
         super().__init__(loop)
-        self.instruments = {}  # type: Dict[string]List[Tick]
+        self.instruments = {}  # type: Dict[str]List[Tick]
         self.instrument_series = {}
         self.last_price = {}
         self.my_orders = {}
+        self.balance = HabrStrategy.BALANCE
 
     @staticmethod
     def check_adfuller(history: List[Tick], cutoff: float = 0.05) -> Tuple[bool, pd.Series]:
@@ -102,23 +104,24 @@ class HabrStrategy(BaseStrategy):
 
             rows = self.check_coin(rows)
             for r in rows:
-                dict_key = "{}{}".format(r.name[0], r.name[1])
-                if r.spread > 0 and self.my_orders.get(dict_key) is None:
-                    self.buy(tick, 1)
-                if r.spread < 0 and self.my_orders.get(dict_key) is not None:
-                    self.sell(tick, 1)
+                if r.spread < 0 and self.my_orders.get(tick.instrument_id) is None:
+                    self.buy(tick, tick.lot_size)
+                if r.spread > 0 and self.my_orders.get(tick.instrument_id) is not None:
+                    self.sell(tick, tick.lot_size)
 
     def buy(self, tick: Tick, count: int):
-        if len(self.orders) > HabrStrategy.MAX_ORDERS:
+        if len(self.orders) >= HabrStrategy.MAX_ORDERS:
             return
-        logger.info("buy")
-        super().buy(tick, count)
+        if super().buy(tick, count):
+            self.my_orders[tick.instrument_id] = True
 
     def sell(self, tick: Tick, count: int):
-        logger.info("sell")
-        super().sell(tick, count)
+        if super().sell(tick, count):
+            del self.my_orders[tick.instrument_id]
 
     def finish(self):
-        for order in self.orders:
+        logger.info("Finish. Order: {}".format(len(self.orders)))
+        orders = [order for order in self.orders]
+        for order in orders:
             self.sell(self.last_price[order["tick"].instrument_id], 1)
-        print(self.balance)
+        logger.info("Balance: {}".format(self.balance))

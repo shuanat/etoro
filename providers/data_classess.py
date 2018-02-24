@@ -31,3 +31,4 @@ class Tick:
     price: float
     instrument_name: str
     instrument_id: str
+    lot_size: int
