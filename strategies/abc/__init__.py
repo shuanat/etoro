@@ -8,23 +8,25 @@ class BaseStrategy:
         self.loop = loop
         self.orders = []
         self.balance = 100000
+        self.fee = 100
 
     def buy(self, tick: Tick, count: int):
-        if tick.price*count > self.balance:
+        if tick.price*count > (self.balance - self.fee):
             return False
+        self.balance -= self.fee
         self.balance -= tick.price*count
         self.orders.append({"count": count, "tick": tick})
-        logger.info("Buy: {}. Balance: {}".format(tick, self.balance))
+        logger.info("Buy: {}. Balance: {}. Count orders: {}".format(tick, self.balance, len(self.orders)))
         return True
 
-    def sell(self, tick: Tick, count: int):
+    def sell(self, tick: Tick):
         for key, order in enumerate(self.orders):
             if order["tick"].instrument_id == tick.instrument_id:
-                if order["count"] == count:
-                    self.balance += tick.price * count
-                    self.orders.pop(key)
-                    logger.info("Sell: {}. Balance: {}".format(tick, self.balance))
-                    return True
+                self.balance += tick.price * order["count"]
+                self.balance -= self.fee
+                self.orders.pop(key)
+                logger.info("Sell: {}. Balance: {} Count orders: {}".format(tick, self.balance, len(self.orders)))
+                return True
 
     def tick(self, tick: Tick):
         raise NotImplemented

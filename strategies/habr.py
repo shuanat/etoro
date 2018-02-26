@@ -14,8 +14,9 @@ from providers.data_classess import (Instrument, InstrumentHistory,
 
 class HabrStrategy(BaseStrategy):
     COUNT_CHECK_ADFULLER = 20
+    ADFULLER_COEFF = 0.05
     MAX_ORDERS = 2
-    BALANCE = 5000
+    BALANCE = 10000
 
     def __init__(self, loop):
         super().__init__(loop)
@@ -26,7 +27,9 @@ class HabrStrategy(BaseStrategy):
         self.balance = HabrStrategy.BALANCE
 
     @staticmethod
-    def check_adfuller(history: List[Tick], cutoff: float = 0.05) -> Tuple[bool, pd.Series]:
+    def check_adfuller(history: List[Tick], cutoff: float = None) -> Tuple[bool, pd.Series]:
+        if cutoff is None:
+            cutoff = HabrStrategy.ADFULLER_COEFF
         time_series = {}
         for row in history:
             time_series[row.time] = row.price
@@ -107,7 +110,7 @@ class HabrStrategy(BaseStrategy):
                 if r.spread < 0 and self.my_orders.get(tick.instrument_id) is None:
                     self.buy(tick, tick.lot_size)
                 if r.spread > 0 and self.my_orders.get(tick.instrument_id) is not None:
-                    self.sell(tick, tick.lot_size)
+                    self.sell(tick)
 
     def buy(self, tick: Tick, count: int):
         if len(self.orders) >= HabrStrategy.MAX_ORDERS:
@@ -115,13 +118,14 @@ class HabrStrategy(BaseStrategy):
         if super().buy(tick, count):
             self.my_orders[tick.instrument_id] = True
 
-    def sell(self, tick: Tick, count: int):
-        if super().sell(tick, count):
+    def sell(self, tick: Tick):
+        logger.info("Sell: {}".format(tick))
+        if super().sell(tick):
             del self.my_orders[tick.instrument_id]
 
     def finish(self):
         logger.info("Finish. Order: {}".format(len(self.orders)))
         orders = [order for order in self.orders]
         for order in orders:
-            self.sell(self.last_price[order["tick"].instrument_id], 1)
+            self.sell(self.last_price[order["tick"].instrument_id])
         logger.info("Balance: {}".format(self.balance))
